@@ -1,20 +1,19 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import RootStack from './navigators/RootStack';
+import { ApolloProvider } from '@apollo/client';
+import client from './config/apollo';
+import AuthProvider from './contexts/AuthContext';
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <AuthProvider>
+      <ApolloProvider client={client}>
+        <NavigationContainer>
+          <RootStack />
+          {/* <TabNavigator /> */}
+        </NavigationContainer>
+      </ApolloProvider>
+    </AuthProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
