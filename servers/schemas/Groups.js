@@ -57,12 +57,12 @@ type Mutation {
     addIncome(groupId: ID!, name: String!, note: String, amount: Float!): Income
     updateIncome(id: ID!, name: String, note: String, amount: Float , groupId: ID!): Income
     deleteIncome(id: ID!, groupId: ID!): String
-    addExpense(groupId: ID!, name: String!, note: String, amount: Float!, date: String, budgetId: ID): Expense
-    updateExpense(id: ID!, name: String, note: String, amount: Float, date: String, budgetId: ID): Expense
-    deleteExpense(id: ID!): Expense
     addBudget(groupId: ID!, name: String!, limit: Float!, icon: String, color: String): Budget
     updateBudget(id: ID!, name: String, limit: Float, icon: String, color: String): Budget
     deleteBudget(id: ID!): Budget
+    addExpense(groupId: ID!, name: String!, note: String, amount: Float!, date: String, budgetId: ID): Expense
+    updateExpense(id: ID!, name: String, note: String, amount: Float, date: String, budgetId: ID): Expense
+    deleteExpense(id: ID!): Expense
 }
 `;
 
