@@ -1,3 +1,6 @@
+import { ObjectId } from "mongodb";
+import { database } from "../config/Mongodb.js";
+
 export default class GroupModel {
   static collection() {
     return database.collection("groups");
@@ -16,17 +19,18 @@ export default class GroupModel {
   }
 
   static async createGroup(auth, group) {
-    const auth = await context.authentication();
+    const invite = (Math.random() * 100000).toString();
     const newGroup = {
       name: group.name,
       description: group.description,
       members: [
         {
-          _id: auth._id,
+          _id: ObjectId.createFromHexString(auth.id),
           name: auth.name,
           role: "Owner",
         },
       ],
+      invite: invite,
     };
     const result = await this.collection().insertOne(newGroup);
     if (result.insertedCount === 1) {
@@ -35,53 +39,62 @@ export default class GroupModel {
     return newGroup;
   }
 
-  static async joinGroup(invite) {
-    const auth = await context.authentication();
+  static async joinGroup(auth, invite) {
     const group = await this.findGroupByInvite(invite);
     if (!group) {
       throw new Error("Group not found");
     }
+    if (
+      group.members.some(
+        (member) => member._id.toString() === auth.id.toString()
+      )
+    ) {
+      throw new Error("You are already a member of this group");
+    }
     const result = await this.collection().updateOne(
       { _id: group._id },
-      { $push: { members: { _id: auth._id, name: auth.name, role: "Member" } } }
+      {
+        $push: {
+          members: {
+            _id: ObjectId.createFromHexString(auth.id),
+            name: auth.name,
+            role: "Member",
+          },
+        },
+      }
     );
-    if (result.modifiedCount === 1) {
-      throw new Error("Failed to join group");
-    }
     return group;
   }
 
   static async updateGroup(auth, id, name, description) {
-    const group = await this.getGroupById(id);
+    const group = await this.getGroupById(ObjectId.createFromHexString(id));
     if (!group) {
       throw new Error("Group not found");
     }
     let member = group.members.find(
-      (member) => member._id.toString() === auth._id.toString()
+      (member) => member._id.toString() === auth.id.toString()
     );
     if (!member) {
       throw new Error("You are not a member of this group");
     }
-    if (member.role !== "Owner" || member.role !== "Admin") {
+
+    if (member.role !== "Owner" && member.role !== "Admin") {
       throw new Error("You are not the admin of this group");
     }
     const result = await this.collection().updateOne(
-      { _id: id },
+      { _id: ObjectId.createFromHexString(id) },
       { $set: { name, description } }
     );
-    if (result.modifiedCount === 1) {
-      throw new Error("Failed to update group");
-    }
     return group;
   }
 
   static async deleteGroup(auth, id) {
-    const group = await this.getGroupById(id);
+    const group = await this.getGroupById(ObjectId.createFromHexString(id));
     if (!group) {
       throw new Error("Group not found");
     }
     let member = group.members.find(
-      (member) => member._id.toString() === auth._id.toString()
+      (member) => member._id.toString() === auth.id.toString()
     );
     if (!member) {
       throw new Error("You are not a member of this group");
@@ -89,10 +102,9 @@ export default class GroupModel {
     if (member.role !== "Owner") {
       throw new Error("Only owners can delete the group");
     }
-    const result = await this.collection().deleteOne({ _id: id });
-    if (result.deletedCount === 1) {
-      throw new Error("Failed to delete group");
-    }
+    const result = await this.collection().deleteOne({
+      _id: ObjectId.createFromHexString(id),
+    });
     return group;
   }
 
@@ -102,7 +114,7 @@ export default class GroupModel {
       throw new Error("Group not found");
     }
     let member = group.members.find(
-      (member) => member._id.toString() === auth._id.toString()
+      (member) => member._id.toString() === auth.id.toString()
     );
     if (!member) {
       throw new Error("You are not a member of this group");
@@ -129,7 +141,7 @@ export default class GroupModel {
       throw new Error("Group not found");
     }
     let member = group.members.find(
-      (member) => member._id.toString() === auth._id.toString()
+      (member) => member._id.toString() === auth.id.toString()
     );
     if (!member) {
       throw new Error("You are not a member of this group");
@@ -160,7 +172,7 @@ export default class GroupModel {
       throw new Error("Group not found");
     }
     let member = group.members.find(
-      (member) => member._id.toString() === auth._id.toString()
+      (member) => member._id.toString() === auth.id.toString()
     );
     if (!member) {
       throw new Error("You are not a member of this group");

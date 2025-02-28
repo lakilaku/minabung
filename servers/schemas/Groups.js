@@ -1,3 +1,4 @@
+import GroupModel from "../models/GroupModel.js";
 const typeDefs = `#graphql
 type Group {
     _id: ID
@@ -91,17 +92,17 @@ const resolvers = {
       const result = await GroupModel.createGroup(auth, group);
       return result;
     },
-    joinGroup: async (_, { invite }) => {
+    joinGroup: async (_, { invite }, context) => {
       const auth = await context.authentication();
       const result = await GroupModel.joinGroup(auth, invite);
       return result;
     },
-    updateGroup: async (_, { id, name, description }) => {
+    updateGroup: async (_, { id, name, description }, context) => {
       const auth = await context.authentication();
       const result = await GroupModel.updateGroup(auth, id, name, description);
       return result;
     },
-    deleteGroup: async (_, { id }) => {
+    deleteGroup: async (_, { id }, context) => {
       const auth = await context.authentication();
       const result = await GroupModel.deleteGroup(auth, id);
       return result;
@@ -138,3 +139,5 @@ const resolvers = {
     },
   },
 };
+
+export { typeDefs as groupTypeDefs, resolvers as groupResolvers };
