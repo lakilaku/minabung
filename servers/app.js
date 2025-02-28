@@ -2,10 +2,11 @@ import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
 import { userResolvers, userTypeDefs } from "./schemas/Users.js";
 import { verifyToken } from "./helpers/jwt.js";
+import { groupResolvers, groupTypeDefs } from "./schemas/Groups.js";
 
 const server = new ApolloServer({
-  typeDefs: [userTypeDefs],
-  resolvers: [userResolvers],
+  typeDefs: [userTypeDefs, groupTypeDefs],
+  resolvers: [userResolvers, groupResolvers],
 });
 
 async function startServer() {

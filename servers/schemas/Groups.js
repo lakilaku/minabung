@@ -1,3 +1,4 @@
+import GroupModel from "../models/GroupModel.js";
 const typeDefs = `#graphql
 type Group {
     _id: ID
@@ -52,10 +53,10 @@ type Mutation {
     createGroup(name: String!, description: String): Group
     joinGroup(invite: String!): Group
     updateGroup(id: ID!, name: String, description: String): Group
-    deleteGroup(id: ID!): Group
-    addIncome(groupId: ID!, name: String!, note: String, amount: Float!, date: String): Income
-    updateIncome(id: ID!, name: String, note: String, amount: Float, date: String): Income
-    deleteIncome(id: ID!): Income
+    deleteGroup(id: ID!): String
+    addIncome(groupId: ID!, name: String!, note: String, amount: Float!): Income
+    updateIncome(id: ID!, name: String, note: String, amount: Float , groupId: ID!): Income
+    deleteIncome(id: ID!, groupId: ID!): String
     addExpense(groupId: ID!, name: String!, note: String, amount: Float!, date: String, budgetId: ID): Expense
     updateExpense(id: ID!, name: String, note: String, amount: Float, date: String, budgetId: ID): Expense
     deleteExpense(id: ID!): Expense
@@ -91,34 +92,33 @@ const resolvers = {
       const result = await GroupModel.createGroup(auth, group);
       return result;
     },
-    joinGroup: async (_, { invite }) => {
+    joinGroup: async (_, { invite }, context) => {
       const auth = await context.authentication();
       const result = await GroupModel.joinGroup(auth, invite);
       return result;
     },
-    updateGroup: async (_, { id, name, description }) => {
+    updateGroup: async (_, { id, name, description }, context) => {
       const auth = await context.authentication();
       const result = await GroupModel.updateGroup(auth, id, name, description);
       return result;
     },
-    deleteGroup: async (_, { id }) => {
+    deleteGroup: async (_, { id }, context) => {
       const auth = await context.authentication();
       const result = await GroupModel.deleteGroup(auth, id);
       return result;
     },
-    addIncome: async (_, { groupId, name, note, amount, date }, context) => {
+    addIncome: async (_, { groupId, name, note, amount }, context) => {
       const auth = await context.authentication();
       const result = await GroupModel.addIncome(
         auth,
         groupId,
         name,
         note,
-        amount,
-        date
+        amount
       );
       return result;
     },
-    updateIncome: async (_, { id, groupId, name, note, amount, date }) => {
+    updateIncome: async (_, { id, groupId, name, note, amount }, context) => {
       const auth = await context.authentication();
       const result = await GroupModel.updateIncome(
         auth,
@@ -126,15 +126,16 @@ const resolvers = {
         id,
         name,
         note,
-        amount,
-        date
+        amount
       );
       return result;
     },
-    deleteIncome: async (_, { groupId, id }) => {
+    deleteIncome: async (_, { groupId, id }, context) => {
       const auth = await context.authentication();
-      const result = await GroupModel.deleteIncome(auth, id);
+      const result = await GroupModel.deleteIncome(auth, groupId, id);
       return result;
     },
   },
 };
+
+export { typeDefs as groupTypeDefs, resolvers as groupResolvers };
