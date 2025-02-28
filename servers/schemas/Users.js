@@ -8,7 +8,6 @@ type User {
     email: String!
     password: String!
     gender: String!
-    role: String!
     profilePicture: String
     birthDate: String
     groupId: ID
@@ -31,12 +30,20 @@ type Mutation {
       email: String!, 
       password: String!,
       gender: String!, 
-      role: String!, 
       profilePicture: String,
       birthDate: String,
       groupId: ID
     ): User
+
     Login(email: String!, password: String!): LoginResponse
+
+    updateProfile(
+    name: String,
+    username: String,
+    email: String,
+    profilePicture: String,
+    birthDate: String
+  ): User
 }
 `;
 
@@ -59,7 +66,6 @@ const resolvers = {
         email,
         password,
         gender,
-        role,
         profilePicture,
         birthDate,
         groupId,
@@ -71,7 +77,6 @@ const resolvers = {
         email,
         password,
         gender,
-        role,
         profilePicture,
         birthDate,
         groupId
@@ -79,6 +84,14 @@ const resolvers = {
     },
     Login: async (_, { email, password }) => {
       return await UserModel.Login(email, password);
+    },
+    updateProfile: async (_, updates, { authentication }) => {
+      const user = await authentication();
+      if (!user) {
+        throw new Error("Unauthorized");
+      }
+
+      return await UserModel.updateProfile(user, updates);
     },
   },
 };
