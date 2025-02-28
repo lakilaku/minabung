@@ -105,11 +105,13 @@ export default class GroupModel {
     const result = await this.collection().deleteOne({
       _id: ObjectId.createFromHexString(id),
     });
-    return group;
+    return "Delete Successful";
   }
 
-  static async addIncome(auth, groupId, name, note, amount, date) {
-    const group = await this.getGroupById(groupId);
+  static async addIncome(auth, groupId, name, note, amount) {
+    const group = await this.getGroupById(
+      ObjectId.createFromHexString(groupId)
+    );
     if (!group) {
       throw new Error("Group not found");
     }
@@ -120,23 +122,27 @@ export default class GroupModel {
       throw new Error("You are not a member of this group");
     }
     const income = {
+      _id: new ObjectId(),
       name,
       note,
       amount,
-      date,
+      date: new Date(),
     };
     const result = await this.collection().updateOne(
-      { _id: groupId },
+      { _id: ObjectId.createFromHexString(groupId) },
       { $push: { incomes: income } }
     );
+    console.log(result);
     if (result.modifiedCount < 1) {
       throw new Error("Failed to add income");
     }
     return income;
   }
 
-  static async updateIncome(auth, groupId, id, name, note, amount, date) {
-    const group = await this.getGroupById(groupId);
+  static async updateIncome(auth, groupId, id, name, note, amount) {
+    const group = await this.getGroupById(
+      ObjectId.createFromHexString(groupId)
+    );
     if (!group) {
       throw new Error("Group not found");
     }
@@ -151,23 +157,35 @@ export default class GroupModel {
       throw new Error("Income not found");
     }
     const result = await this.collection().updateOne(
-      { _id: groupId, "incomes._id": id },
+      {
+        _id: ObjectId.createFromHexString(groupId),
+        "incomes._id": ObjectId.createFromHexString(id),
+      },
       {
         $set: {
           "incomes.$.name": name,
           "incomes.$.note": note,
           "incomes.$.amount": amount,
-          "incomes.$.date": date,
         },
       }
     );
     if (result.modifiedCount < 1) {
       throw new Error("Failed to update income");
     }
+    const updatedGroup = await this.getGroupById(
+      ObjectId.createFromHexString(groupId)
+    );
+    const updatedGroupIncome = updatedGroup.incomes.find(
+      (income) => income._id.toString() === id
+    );
+
+    return updatedGroupIncome;
   }
 
   static async deleteIncome(auth, groupId, id) {
-    const group = await this.getGroupById(groupId);
+    const group = await this.getGroupById(
+      ObjectId.createFromHexString(groupId)
+    );
     if (!group) {
       throw new Error("Group not found");
     }
@@ -182,11 +200,12 @@ export default class GroupModel {
       throw new Error("Income not found");
     }
     const result = await this.collection().updateOne(
-      { _id: groupId },
-      { $pull: { incomes: { _id: id } } }
+      { _id: ObjectId.createFromHexString(groupId) },
+      { $pull: { incomes: { _id: ObjectId.createFromHexString(id) } } }
     );
     if (result.modifiedCount < 1) {
       throw new Error("Failed to delete income");
     }
+    return "Delete Successful";
   }
 }
