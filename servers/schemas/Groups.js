@@ -135,6 +135,96 @@ const resolvers = {
       const result = await GroupModel.deleteIncome(auth, groupId, id);
       return result;
     },
+    addBudget: async (
+      _,
+      { groupId, name, limit, icon, color },
+      { authentication }
+    ) => {
+      const user = await authentication();
+      if (!user) {
+        throw new Error("Unauthorized");
+      }
+
+      return await GroupModel.addBudget(
+        user,
+        groupId,
+        name,
+        limit,
+        icon,
+        color
+      );
+    },
+    updateBudget: async (
+      _,
+      { id, name, limit, icon, color },
+      { authentication }
+    ) => {
+      const user = await authentication();
+      if (!user) {
+        throw new Error("Unauthorized");
+      }
+
+      return await GroupModel.updateBudget(user, id, {
+        name,
+        limit,
+        icon,
+        color,
+      });
+    },
+    deleteBudget: async (_, { id }, { authentication }) => {
+      const user = await authentication();
+      if (!user) {
+        throw new Error("Unauthorized");
+      }
+
+      return await GroupModel.deleteBudget(user, id);
+    },
+    addExpense: async (
+      _,
+      { groupId, name, note, amount, date, budgetId },
+      { authentication }
+    ) => {
+      const user = await authentication();
+      if (!user) {
+        throw new Error("Unauthorized");
+      }
+
+      return await GroupModel.addExpense(
+        user,
+        groupId,
+        name,
+        note,
+        amount,
+        date,
+        budgetId
+      );
+    },
+    updateExpense: async (
+      _,
+      { id, name, note, amount, date, budgetId },
+      { authentication }
+    ) => {
+      const user = await authentication();
+      if (!user) {
+        throw new Error("Unauthorized");
+      }
+
+      return await GroupModel.updateExpense(user, id, {
+        name,
+        note,
+        amount,
+        date,
+        budgetId,
+      });
+    },
+    deleteExpense: async (_, { id }, { authentication }) => {
+      const user = await authentication();
+      if (!user) {
+        throw new Error("Unauthorized");
+      }
+
+      return await GroupModel.deleteExpense(user, id);
+    },
   },
 };
 
