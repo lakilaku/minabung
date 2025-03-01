@@ -46,6 +46,9 @@ type Query {
     getGroupByUserId(userId: ID!): [Group]
     findGroupByInvite(invite: String!): Group
     findIncomeById(id: ID!): Income
+    getThisMonthIncomes(groupId: ID!): [Income]
+    getThisMonthExpenses(groupId: ID!): [Expense]
+    getThisMonthExpensesByBudgetId(groupId: ID!, budgetId: ID!): [Expense]
 }
 
 type Mutation {
@@ -78,6 +81,43 @@ const resolvers = {
     },
     findIncomeById: async (_, { id }) => {
       return await GroupModel.collection().findOne({ "incomes._id": id });
+    },
+    getThisMonthIncomes: async (_, { groupId }) => {
+      const group = await GroupModel.collection().findOne({ _id: groupId });
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const incomes = group.incomes.filter((income) => {
+        const date = new Date(income.date);
+        return date >= startOfMonth && date <= endOfMonth;
+      });
+      return incomes;
+    },
+    getThisMonthExpenses: async (_, { groupId }) => {
+      const group = await GroupModel.collection().findOne({ _id: groupId });
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const expenses = group.expenses.filter((expense) => {
+        const date = new Date(expense.date);
+        return date >= startOfMonth && date <= endOfMonth;
+      });
+      return expenses;
+    },
+    getThisMonthExpensesByBudgetId: async (_, { groupId, budgetId }) => {
+      const group = await GroupModel.collection().findOne({ _id: groupId });
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const expenses = group.expenses.filter((expense) => {
+        const date = new Date(expense.date);
+        return (
+          date >= startOfMonth &&
+          date <= endOfMonth &&
+          expense.budgetId === budgetId
+        );
+      });
+      return expenses;
     },
   },
 
