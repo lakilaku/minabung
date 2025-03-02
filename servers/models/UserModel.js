@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb";
 import { database } from "../config/Mongodb.js";
 import { hashPassword, comparePassword } from "../helpers/bcrypt.js";
 import { signToken } from "../helpers/jwt.js";
+import cloudinary from "../config/Cloudinary.js";
 
 class UserModel {
   static collection() {
@@ -77,11 +78,45 @@ class UserModel {
     if (!findUser) {
       throw new Error("User not found");
     }
+    let profilePictureUrl = findUser.profilePicture;
+
+    console.log("🔄 Received Updates:", updates);
+    if (updates.profilePicture) {
+      console.log("📤 Uploading image to Cloudinary...");
+
+      const { createReadStream, filename } = await updates.profilePicture;
+      const stream = createReadStream();
+
+      try {
+        const cloudinaryUpload = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: "profile_pictures" },
+            (error, result) => {
+              if (error) {
+                console.error("❌ Cloudinary Upload Failed:", error);
+                reject(error);
+              } else {
+                console.log("✅ Cloudinary Upload Success:", result.secure_url);
+                resolve(result.secure_url);
+              }
+            }
+          );
+          stream.pipe(uploadStream);
+        });
+
+        profilePictureUrl = cloudinaryUpload;
+      } catch (error) {
+        console.error("❌ Error Uploading to Cloudinary:", error);
+        throw new Error("Failed to upload image to Cloudinary");
+      }
+    }
+    console.log("🖼️ Updated Profile Picture URL:", profilePictureUrl);
+
     const updateData = {
       name: updates.name || findUser.name,
       username: updates.username || findUser.username,
       email: updates.email || findUser.email,
-      profilePicture: updates.profilePicture || findUser.profilePicture,
+      profilePicture: profilePictureUrl,
       birthDate: updates.birthDate || findUser.birthDate,
     };
     const result = await this.collection().findOneAndUpdate(
@@ -93,6 +128,21 @@ class UserModel {
     const updatedUser = await this.collection().findOne({ _id: id });
 
     return updatedUser;
+  }
+
+  static async updateUserGroup(userId, groupId) {
+    const id = ObjectId.createFromHexString(userId);
+
+    const result = await this.collection().updateOne(
+      { _id: id },
+      { $set: { groupId: groupId } }
+    );
+
+    if (result.modifiedCount < 1) {
+      throw new Error("Failed to update user with new groupId");
+    }
+
+    console.log(`✅ User ${userId} now belongs to Group ${groupId}`);
   }
 }
 

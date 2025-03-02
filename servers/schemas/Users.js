@@ -1,3 +1,4 @@
+import { GraphQLUpload } from "graphql-upload-minimal";
 import UserModel from "../models/UserModel.js";
 
 const typeDefs = `#graphql
@@ -23,6 +24,7 @@ type Query {
     getUserById(id: ID!): User
 }
 
+scalar Upload
 type Mutation {
     Register(
       name: String!,
@@ -41,13 +43,14 @@ type Mutation {
     name: String,
     username: String,
     email: String,
-    profilePicture: String,
+    profilePicture: Upload,
     birthDate: String
   ): User
 }
 `;
 
 const resolvers = {
+  Upload: GraphQLUpload,
   Query: {
     getUsers: async () => {
       return await UserModel.findAll();
