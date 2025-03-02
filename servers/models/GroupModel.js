@@ -1,21 +1,10 @@
 import { ObjectId } from "mongodb";
 import { database } from "../config/Mongodb.js";
+import UserModel from "./UserModel.js";
 
 export default class GroupModel {
   static collection() {
     return database.collection("groups");
-  }
-
-  static async getGroupById(id) {
-    return await this.collection().findOne({ _id: id });
-  }
-
-  static async getGroupByUserId(userId) {
-    return await this.collection().find({ members: userId }).toArray();
-  }
-
-  static async findGroupByInvite(invite) {
-    return await this.collection().findOne({ invite: invite });
   }
 
   static async createGroup(auth, group) {
@@ -33,10 +22,11 @@ export default class GroupModel {
       invite: invite,
     };
     const result = await this.collection().insertOne(newGroup);
-    if (result.insertedCount === 1) {
+    if (!result.insertedId) {
       throw new Error("Failed to create group");
     }
-    return newGroup;
+    await UserModel.updateUserGroup(auth.id, result.insertedId);
+    return { _id: result.insertedId, ...newGroup };
   }
 
   static async joinGroup(auth, invite) {
@@ -132,7 +122,6 @@ export default class GroupModel {
       { _id: ObjectId.createFromHexString(groupId) },
       { $push: { incomes: income } }
     );
-    console.log(result);
     if (result.modifiedCount < 1) {
       throw new Error("Failed to add income");
     }
@@ -332,7 +321,7 @@ export default class GroupModel {
       name,
       note: note || "",
       amount,
-      date: date || new Date().toISOString(),
+      date: date || new Date(),
       budgetId: budgetId ? ObjectId.createFromHexString(budgetId) : null,
     };
 

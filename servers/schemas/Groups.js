@@ -1,3 +1,4 @@
+import { ObjectId } from "mongodb";
 import GroupModel from "../models/GroupModel.js";
 const typeDefs = `#graphql
 type Group {
@@ -47,6 +48,9 @@ type Query {
     getGroupByUserId(userId: ID!): [Group]
     findGroupByInvite(invite: String!): Group
     findIncomeById(id: ID!): Income
+    getThisMonthIncomes(groupId: ID!): [Income]
+    getThisMonthExpenses(groupId: ID!): [Expense]
+    getThisMonthExpensesByBudgetId(groupId: ID!, budgetId: ID!): [Expense]
 }
 
 type Mutation {
@@ -72,7 +76,10 @@ const resolvers = {
       return await GroupModel.collection().findOne({ _id: id });
     },
     getGroupByUserId: async (_, { userId }) => {
-      return await GroupModel.collection().find({ members: userId }).toArray();
+      let userIdHex = ObjectId.createFromHexString(userId);
+      return await GroupModel.collection()
+        .find({ "members._id": userIdHex })
+        .toArray();
     },
     findGroupByInvite: async (_, { invite }) => {
       return await GroupModel.collection().findOne({ invite: invite });
@@ -80,17 +87,60 @@ const resolvers = {
     findIncomeById: async (_, { id }) => {
       return await GroupModel.collection().findOne({ "incomes._id": id });
     },
+    getThisMonthIncomes: async (_, { groupId }) => {
+      const group = await GroupModel.collection().findOne({
+        _id: ObjectId.createFromHexString(groupId),
+      });
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const incomes = group.incomes.filter((income) => {
+        const date = new Date(income.date);
+        return date >= startOfMonth && date <= endOfMonth;
+      });
+      return incomes;
+    },
+    getThisMonthExpenses: async (_, { groupId }) => {
+      const group = await GroupModel.collection().findOne({
+        _id: ObjectId.createFromHexString(groupId),
+      });
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const expenses = group.expenses.filter((expense) => {
+        const date = new Date(expense.date);
+        return date >= startOfMonth && date <= endOfMonth;
+      });
+      return expenses;
+    },
+    getThisMonthExpensesByBudgetId: async (_, { groupId, budgetId }) => {
+      const group = await GroupModel.collection().findOne({
+        _id: ObjectId.createFromHexString(groupId),
+      });
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const expenses = group.expenses.filter((expense) => {
+        const date = new Date(expense.date);
+        return (
+          date >= startOfMonth &&
+          date <= endOfMonth &&
+          expense.budgetId.toString() ===
+            ObjectId.createFromHexString(budgetId).toString()
+        );
+      });
+      return expenses;
+    },
   },
 
   Mutation: {
-    createGroup: async (_, { name, description }, context) => {
-      const auth = await context.authentication();
-      const group = {
-        name,
-        description,
-      };
-      const result = await GroupModel.createGroup(auth, group);
-      return result;
+    createGroup: async (_, { name, description }, { authentication }) => {
+      const user = await authentication();
+      if (!user) {
+        throw new Error("Unauthorized");
+      }
+
+      return await GroupModel.createGroup(user, { name, description });
     },
     joinGroup: async (_, { invite }, context) => {
       const auth = await context.authentication();
