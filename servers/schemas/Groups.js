@@ -76,7 +76,10 @@ const resolvers = {
       return await GroupModel.collection().findOne({ _id: id });
     },
     getGroupByUserId: async (_, { userId }) => {
-      return await GroupModel.collection().find({ members: userId }).toArray();
+      let userIdHex = ObjectId.createFromHexString(userId);
+      return await GroupModel.collection()
+        .find({ "members._id": userIdHex })
+        .toArray();
     },
     findGroupByInvite: async (_, { invite }) => {
       return await GroupModel.collection().findOne({ invite: invite });

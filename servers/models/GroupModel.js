@@ -7,18 +7,6 @@ export default class GroupModel {
     return database.collection("groups");
   }
 
-  static async getGroupById(id) {
-    return await this.collection().findOne({ _id: id });
-  }
-
-  static async getGroupByUserId(userId) {
-    return await this.collection().find({ members: userId }).toArray();
-  }
-
-  static async findGroupByInvite(invite) {
-    return await this.collection().findOne({ invite: invite });
-  }
-
   static async createGroup(auth, group) {
     const invite = (Math.random() * 100000).toString();
     const newGroup = {
