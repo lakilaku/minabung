@@ -1,3 +1,4 @@
+import { ObjectId } from "mongodb";
 import GroupModel from "../models/GroupModel.js";
 const typeDefs = `#graphql
 type Group {
@@ -84,7 +85,9 @@ const resolvers = {
       return await GroupModel.collection().findOne({ "incomes._id": id });
     },
     getThisMonthIncomes: async (_, { groupId }) => {
-      const group = await GroupModel.collection().findOne({ _id: groupId });
+      const group = await GroupModel.collection().findOne({
+        _id: ObjectId.createFromHexString(groupId),
+      });
       const today = new Date();
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -95,7 +98,9 @@ const resolvers = {
       return incomes;
     },
     getThisMonthExpenses: async (_, { groupId }) => {
-      const group = await GroupModel.collection().findOne({ _id: groupId });
+      const group = await GroupModel.collection().findOne({
+        _id: ObjectId.createFromHexString(groupId),
+      });
       const today = new Date();
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -106,7 +111,9 @@ const resolvers = {
       return expenses;
     },
     getThisMonthExpensesByBudgetId: async (_, { groupId, budgetId }) => {
-      const group = await GroupModel.collection().findOne({ _id: groupId });
+      const group = await GroupModel.collection().findOne({
+        _id: ObjectId.createFromHexString(groupId),
+      });
       const today = new Date();
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -115,7 +122,8 @@ const resolvers = {
         return (
           date >= startOfMonth &&
           date <= endOfMonth &&
-          expense.budgetId === budgetId
+          expense.budgetId.toString() ===
+            ObjectId.createFromHexString(budgetId).toString()
         );
       });
       return expenses;
@@ -123,14 +131,13 @@ const resolvers = {
   },
 
   Mutation: {
-    createGroup: async (_, { name, description }, context) => {
-      const auth = await context.authentication();
-      const group = {
-        name,
-        description,
-      };
-      const result = await GroupModel.createGroup(auth, group);
-      return result;
+    createGroup: async (_, { name, description }, { authentication }) => {
+      const user = await authentication();
+      if (!user) {
+        throw new Error("Unauthorized");
+      }
+
+      return await GroupModel.createGroup(user, { name, description });
     },
     joinGroup: async (_, { invite }, context) => {
       const auth = await context.authentication();
