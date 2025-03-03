@@ -15,6 +15,11 @@ export default class GroupModel {
       _id: ObjectId.createFromHexString(groupId),
     });
   }
+  static async getGroupById(groupId) {
+    return await this.collection().findOne({
+      _id: groupId,
+    });
+  }
 
   static async createGroup(auth, group) {
     const invite = (Math.random() * 100000).toString();
@@ -82,7 +87,8 @@ export default class GroupModel {
       { _id: ObjectId.createFromHexString(id) },
       { $set: { name, description } }
     );
-    return group;
+    const newGroup = await this.getGroupById(ObjectId.createFromHexString(id));
+    return newGroup;
   }
 
   static async deleteGroup(auth, id) {
