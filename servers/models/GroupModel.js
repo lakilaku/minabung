@@ -7,26 +7,48 @@ export default class GroupModel {
     return database.collection("groups");
   }
 
-  static async createGroup(auth, group) {
-    const invite = (Math.random() * 100000).toString();
-    const newGroup = {
-      name: group.name,
-      description: group.description,
-      members: [
-        {
-          _id: ObjectId.createFromHexString(auth.id),
-          name: auth.name,
-          role: "Owner",
-        },
-      ],
-      invite: invite,
-    };
-    const result = await this.collection().insertOne(newGroup);
-    if (!result.insertedId) {
-      throw new Error("Failed to create group");
+  static async findGroupByInvite(invite) {
+    return await this.collection().findOne({ invite });
+  }
+  static async findGroupById(groupId) {
+    return await this.collection().findOne({
+      _id: ObjectId.createFromHexString(groupId),
+    });
+  }
+
+  static async joinGroup(auth, invite) {
+    const group = await GroupModel.findGroupByInvite(invite);
+
+    if (!group) {
+      throw new Error("Group not found");
     }
-    await UserModel.updateUserGroup(auth.id, result.insertedId);
-    return { _id: result.insertedId, ...newGroup };
+
+    if (
+      group.members.some(
+        (member) => member._id.toString() === auth.id.toString()
+      )
+    ) {
+      throw new Error("You are already a member of this group");
+    }
+
+    const result = await this.collection().updateOne(
+      { _id: group._id },
+      {
+        $push: {
+          members: {
+            _id: ObjectId.createFromHexString(auth.id),
+            name: auth.name,
+            role: "Member",
+          },
+        },
+      }
+    );
+
+    if (result.modifiedCount === 0) {
+      throw new Error("Failed to join group");
+    }
+
+    return await this.findGroupById(group._id);
   }
 
   static async joinGroup(auth, invite) {
