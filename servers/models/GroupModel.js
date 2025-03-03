@@ -7,6 +7,20 @@ export default class GroupModel {
     return database.collection("groups");
   }
 
+  static async findGroupByInvite(invite) {
+    return await this.collection().findOne({ invite });
+  }
+  static async findGroupById(groupId) {
+    return await this.collection().findOne({
+      _id: ObjectId.createFromHexString(groupId),
+    });
+  }
+  static async getGroupById(groupId) {
+    return await this.collection().findOne({
+      _id: groupId,
+    });
+  }
+
   static async createGroup(auth, group) {
     const invite = (Math.random() * 100000).toString();
     const newGroup = {
@@ -28,7 +42,6 @@ export default class GroupModel {
     await UserModel.updateUserGroup(auth.id, result.insertedId);
     return { _id: result.insertedId, ...newGroup };
   }
-
   static async joinGroup(auth, invite) {
     const group = await this.findGroupByInvite(invite);
     if (!group) {
@@ -55,7 +68,6 @@ export default class GroupModel {
     );
     return group;
   }
-
   static async updateGroup(auth, id, name, description) {
     const group = await this.getGroupById(ObjectId.createFromHexString(id));
     if (!group) {
@@ -75,7 +87,8 @@ export default class GroupModel {
       { _id: ObjectId.createFromHexString(id) },
       { $set: { name, description } }
     );
-    return group;
+    const newGroup = await this.getGroupById(ObjectId.createFromHexString(id));
+    return newGroup;
   }
 
   static async deleteGroup(auth, id) {
