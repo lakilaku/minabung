@@ -88,7 +88,8 @@ type Mutation {
 const resolvers = {
   Query: {
     getGroupById: async (_, { id }) => {
-      return await GroupModel.collection().findOne({ _id: id });
+      let idHex = ObjectId.createFromHexString(id);
+      return await GroupModel.collection().findOne({ _id: idHex });
     },
     getGroupByUserId: async (_, { userId }) => {
       let userIdHex = ObjectId.createFromHexString(userId);
