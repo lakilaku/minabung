@@ -15,6 +15,28 @@ export default class GroupModel {
       _id: ObjectId.createFromHexString(groupId),
     });
   }
+
+  static async createGroup(auth, group) {
+    const invite = (Math.random() * 100000).toString();
+    const newGroup = {
+      name: group.name,
+      description: group.description,
+      members: [
+        {
+          _id: ObjectId.createFromHexString(auth.id),
+          name: auth.name,
+          role: "Owner",
+        },
+      ],
+      invite: invite,
+    };
+    const result = await this.collection().insertOne(newGroup);
+    if (!result.insertedId) {
+      throw new Error("Failed to create group");
+    }
+    await UserModel.updateUserGroup(auth.id, result.insertedId);
+    return { _id: result.insertedId, ...newGroup };
+  }
   static async joinGroup(auth, invite) {
     const group = await this.findGroupByInvite(invite);
     if (!group) {
@@ -41,7 +63,6 @@ export default class GroupModel {
     );
     return group;
   }
-
   static async updateGroup(auth, id, name, description) {
     const group = await this.getGroupById(ObjectId.createFromHexString(id));
     if (!group) {
