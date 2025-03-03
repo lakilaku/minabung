@@ -43,6 +43,16 @@ type Expense {
     budgetId: ID
 }
 
+type Transaction {
+    _id: ID
+    name: String
+    note: String
+    amount: Float
+    date: String
+    budgetId: ID
+    type: String
+}
+
 type Query {
     getGroupById(id: ID!): Group
     getGroupByUserId(userId: ID!): [Group]
@@ -51,6 +61,11 @@ type Query {
     getThisMonthIncomes(groupId: ID!): [Income]
     getThisMonthExpenses(groupId: ID!): [Expense]
     getThisMonthExpensesByBudgetId(groupId: ID!, budgetId: ID!): [Expense]
+    getThisMonthIncomesandExpenses(groupId: ID!): [Transaction]
+    getAllIncomes(groupId: ID!): [Income]
+    getAllExpenses(groupId: ID!): [Expense]
+    getIncomesByMonth(groupId: ID!, month: Int!, year: Int!): [Income]
+    getExpensesByMonth(groupId: ID!, month: Int!, year: Int!): [Expense]
 }
 
 type Mutation {
@@ -128,6 +143,81 @@ const resolvers = {
           expense.budgetId.toString() ===
             ObjectId.createFromHexString(budgetId).toString()
         );
+      });
+      return expenses;
+    },
+    getThisMonthIncomesandExpenses: async (_, { groupId }) => {
+      const group = await GroupModel.collection().findOne({
+        _id: ObjectId.createFromHexString(groupId),
+      });
+      const today = new Date();
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const incomes = group.incomes.filter((income) => {
+        const date = new Date(income.date);
+        return date >= startOfMonth && date <= endOfMonth;
+      });
+      const expenses = group.expenses.filter((expense) => {
+        const date = new Date(expense.date);
+        return date >= startOfMonth && date <= endOfMonth;
+      });
+
+      const incomeTransactions = incomes.map((income) => ({
+        ...income,
+        type: "income",
+      }));
+      const expenseTransactions = expenses.map((expense) => ({
+        ...expense,
+        type: "expense",
+      }));
+      const transactions = [...incomeTransactions, ...expenseTransactions];
+      const sortedTransactions = transactions.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateB - dateA;
+      });
+      return sortedTransactions;
+    },
+    getAllIncomes: async (_, { groupId }) => {
+      const group = await GroupModel.collection().findOne({
+        _id: ObjectId.createFromHexString(groupId),
+      });
+      if (!group.incomes) {
+        return [];
+      }
+      return group.incomes;
+    },
+    getAllExpenses: async (_, { groupId }) => {
+      const group = await GroupModel.collection().findOne({
+        _id: ObjectId.createFromHexString(groupId),
+      });
+      if (!group) {
+        return [];
+      }
+      if (!group.expenses) {
+        return [];
+      }
+      return group.expenses;
+    },
+    getIncomesByMonth: async (_, { groupId, month, year }) => {
+      const group = await GroupModel.collection().findOne({
+        _id: ObjectId.createFromHexString(groupId),
+      });
+      month = month - 1;
+      const incomes = group.incomes.filter((income) => {
+        const date = new Date(income.date);
+        return date.getMonth() === month && date.getFullYear() === year;
+      });
+      return incomes;
+    },
+    getExpensesByMonth: async (_, { groupId, month, year }) => {
+      const group = await GroupModel.collection().findOne({
+        _id: ObjectId.createFromHexString(groupId),
+      });
+      month = month - 1;
+      const expenses = group.expenses.filter((expense) => {
+        const date = new Date(expense.date);
+        return date.getMonth() === month && date.getFullYear() === year;
       });
       return expenses;
     },
