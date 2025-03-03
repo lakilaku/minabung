@@ -15,42 +15,6 @@ export default class GroupModel {
       _id: ObjectId.createFromHexString(groupId),
     });
   }
-
-  static async joinGroup(auth, invite) {
-    const group = await GroupModel.findGroupByInvite(invite);
-
-    if (!group) {
-      throw new Error("Group not found");
-    }
-
-    if (
-      group.members.some(
-        (member) => member._id.toString() === auth.id.toString()
-      )
-    ) {
-      throw new Error("You are already a member of this group");
-    }
-
-    const result = await this.collection().updateOne(
-      { _id: group._id },
-      {
-        $push: {
-          members: {
-            _id: ObjectId.createFromHexString(auth.id),
-            name: auth.name,
-            role: "Member",
-          },
-        },
-      }
-    );
-
-    if (result.modifiedCount === 0) {
-      throw new Error("Failed to join group");
-    }
-
-    return await this.findGroupById(group._id);
-  }
-
   static async joinGroup(auth, invite) {
     const group = await this.findGroupByInvite(invite);
     if (!group) {
