@@ -19,6 +19,11 @@ type LoginResponse {
     user: User
 }
 
+type ProfilePictureResponse {
+  message: String!
+  profilePicture: String!
+}
+
 type Query {
     getUsers: [User]
     getUserById(id: ID!): User
@@ -43,9 +48,11 @@ type Mutation {
     name: String,
     username: String,
     email: String,
-    profilePicture: Upload,
     birthDate: String
   ): User
+
+  updateProfilePicture(profilePicture: Upload!): ProfilePictureResponse!
+  
 }
 `;
 
@@ -95,6 +102,14 @@ const resolvers = {
       }
 
       return await UserModel.updateProfile(user, updates);
+    },
+    updateProfilePicture: async (_, { profilePicture }, { authentication }) => {
+      const user = await authentication();
+      if (!user) {
+        throw new Error("Unauthorized");
+      }
+
+      return await UserModel.updateProfilePicture(user, profilePicture);
     },
   },
 };
