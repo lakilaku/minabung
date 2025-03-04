@@ -78,56 +78,73 @@ class UserModel {
     if (!findUser) {
       throw new Error("User not found");
     }
-    let profilePictureUrl = findUser.profilePicture;
-
-    console.log("🔄 Received Updates:", updates);
-    if (updates.profilePicture) {
-      console.log("📤 Uploading image to Cloudinary...");
-
-      const { createReadStream, filename } = await updates.profilePicture;
-      const stream = createReadStream();
-
-      try {
-        const cloudinaryUpload = await new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            { folder: "profile_pictures" },
-            (error, result) => {
-              if (error) {
-                console.error("❌ Cloudinary Upload Failed:", error);
-                reject(error);
-              } else {
-                console.log("✅ Cloudinary Upload Success:", result.secure_url);
-                resolve(result.secure_url);
-              }
-            }
-          );
-          stream.pipe(uploadStream);
-        });
-
-        profilePictureUrl = cloudinaryUpload;
-      } catch (error) {
-        console.error("❌ Error Uploading to Cloudinary:", error);
-        throw new Error("Failed to upload image to Cloudinary");
-      }
-    }
-    console.log("🖼️ Updated Profile Picture URL:", profilePictureUrl);
-
     const updateData = {
       name: updates.name || findUser.name,
       username: updates.username || findUser.username,
       email: updates.email || findUser.email,
-      profilePicture: profilePictureUrl,
       birthDate: updates.birthDate || findUser.birthDate,
     };
+
     const result = await this.collection().findOneAndUpdate(
       { _id: id },
       { $set: updateData },
       { returnDocument: "after" }
     );
 
+    if (!result) {
+      throw new Error("Failed to update profile");
+    }
+
     const updatedUser = await this.collection().findOne({ _id: id });
 
     return updatedUser;
+  }
+  static async updateProfilePicture(user, file) {
+    const id = ObjectId.createFromHexString(user.id);
+    const findUser = await this.collection().findOne({ _id: id });
+
+    if (!findUser) {
+      throw new Error("User not found");
+    }
+
+    console.log("📤 Uploading new profile picture to Cloudinary...");
+
+    const { createReadStream } = await file;
+    const stream = createReadStream();
+
+    try {
+      const cloudinaryUpload = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: "profile_pictures" },
+          (error, result) => {
+            if (error) {
+              console.error("❌ Cloudinary Upload Failed:", error);
+              reject(error);
+            } else {
+              console.log("✅ Cloudinary Upload Success:", result.secure_url);
+              resolve(result.secure_url);
+            }
+          }
+        );
+        stream.pipe(uploadStream);
+      });
+
+      console.log("🖼️ Updated Profile Picture URL:", cloudinaryUpload);
+
+      const result = await this.collection().findOneAndUpdate(
+        { _id: id },
+        { $set: { profilePicture: cloudinaryUpload } },
+        { returnDocument: "after" }
+      );
+
+      return {
+        message: "Profile picture updated successfully!",
+        profilePicture: cloudinaryUpload,
+      };
+    } catch (error) {
+      console.error("❌ Error Uploading to Cloudinary:", error);
+      throw new Error("Failed to upload image to Cloudinary");
+    }
   }
 
   static async updateUserGroup(userId, groupId) {
