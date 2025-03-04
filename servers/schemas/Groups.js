@@ -82,6 +82,7 @@ type Mutation {
     addExpense(groupId: ID!, name: String!, note: String, amount: Float!, date: String, budgetId: ID): Expense
     updateExpense(id: ID!, name: String, note: String, amount: Float, date: String, budgetId: ID): Expense
     deleteExpense(id: ID!): Expense
+    createAIGroup(userPrompt: String!): Group
 }
 `;
 
@@ -365,6 +366,10 @@ const resolvers = {
       }
 
       return await GroupModel.deleteExpense(user, id);
+    },
+    createAIGroup: async (_, { userPrompt }, { authentication }) => {
+      const user = await authentication();
+      return await GroupModel.createAIGroup(user, userPrompt);
     },
   },
 };
