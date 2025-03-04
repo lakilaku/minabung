@@ -23,6 +23,15 @@ export default class GroupModel {
   }
 
   static async createGroup(auth, group) {
+    const userGroups = await this.collection().countDocuments({
+      "members._id": ObjectId.createFromHexString(auth.id),
+      "members.role": "Owner",
+    });
+
+    if (userGroups >= 3) {
+      throw new Error("You have reached the maximum limit of 3 groups.");
+    }
+
     const invite = (Math.random() * 100000).toString();
     const newGroup = {
       name: group.name,
@@ -41,18 +50,29 @@ export default class GroupModel {
       throw new Error("Failed to create group");
     }
     await UserModel.updateUserGroup(auth.id, result.insertedId);
+
     return { _id: result.insertedId, ...newGroup };
   }
   static async joinGroup(auth, invite) {
+    if (!auth.id || typeof auth.id !== "string" || auth.id.length !== 24) {
+      throw new Error("Invalid user ID: Must be a 24-character hex string.");
+    }
+
+    console.log("🔍 Checking User ID:", auth.id);
+
+    const userId = new ObjectId(auth.id);
+    const userGroups = await this.collection().countDocuments({
+      "members._id": userId,
+    });
+
+    if (userGroups >= 3) {
+      throw new Error("You can only join up to 3 groups.");
+    }
     const group = await this.findGroupByInvite(invite);
     if (!group) {
       throw new Error("Group not found");
     }
-    if (
-      group.members.some(
-        (member) => member._id.toString() === auth.id.toString()
-      )
-    ) {
+    if (group.members.some((member) => member._id.toString() === auth.id)) {
       throw new Error("You are already a member of this group");
     }
     const result = await this.collection().updateOne(
@@ -60,14 +80,19 @@ export default class GroupModel {
       {
         $push: {
           members: {
-            _id: ObjectId.createFromHexString(auth.id),
+            _id: userId,
             name: auth.name,
             role: "Member",
           },
         },
       }
     );
-    return group;
+
+    if (result.modifiedCount === 0) {
+      throw new Error("Failed to join the group");
+    }
+
+    return await this.findGroupById(group._id);
   }
   static async updateGroup(auth, id, name, description) {
     const group = await this.getGroupById(ObjectId.createFromHexString(id));
@@ -433,60 +458,38 @@ export default class GroupModel {
 
       For the icons use the following list as icon-name :
       [
-          "restaurant",
-          "theaters",
-          "school",
-          "devices",
-          "airplane-ticket",
-          "shopping-cart",
-          "attach-money",
-          "shoe-sneaker",
-          "wallet",
-          "car-rental",
-          "card-giftcard",
-          "movie-outline",
-          "cash-multiple",
-          "cellphone",
-          "wallet-outline",
-          "car",
-          "home-outline", 
-          "lightning-bolt-outline", 
-          "water-outline", 
-          "wifi", 
-          "hospital-box-outline", 
-          "stethoscope", 
-          "pill", 
-          "shield-account-outline", 
-          "baby-bottle-outline", 
-          "dog", 
-          "basketball", 
-          "gamepad-variant",
-          "music-note-outline", 
-          "book-open-outline", 
-          "charity",
-          "party-popper", 
-          "gas-station", 
-          "credit-card-outline", 
-          "bank-outline", 
-          "currency-usd", 
-          "train", 
-          "bus", 
-          "car-wash", 
-          "tools", 
-          "tooth-outline", 
-          "silverware", 
-          "tshirt-crew-outline",
-          "hanger", 
-          "hair-dryer-outline", 
-          "sleep",
-          "earth",
-          "briefcase-outline", 
-          "hammer-wrench", 
-          "calendar-check-outline",
-          "monitor-dashboard", 
-          "medal-outline", 
-          "currency-usd-off", 
-          "bookmark-music-outline",
+          "restaurant", 
+          "shopping-cart", 
+          "attach-money", 
+          "wallet", 
+          "car-rental", 
+          "card-giftcard", 
+          "local-hospital", 
+          "home", 
+          "school", 
+          "flight", 
+          "subscriptions", 
+          "movie", 
+          "fitness-center", 
+          "pets", 
+          "child-care", 
+          "house-siding", 
+          "lightbulb",
+          "gas-meter", 
+          "water-drop",  
+          "trending-up", 
+          "savings", 
+          "luggage", 
+          "celebration",
+          "handyman", 
+          "diversity-3", 
+          "workspace-premium", 
+          "security", 
+          "groups", 
+          "volunteer-activism", 
+          "delivery-dining",
+          "liquor", 
+          "local-bar", 
       ]
       Generate a JSON response with the following structure:
       {
