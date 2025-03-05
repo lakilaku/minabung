@@ -449,7 +449,9 @@ export default class GroupModel {
           "#9b59b6",
           "#34495e",
           "#f1c40f",
-        ]
+        ],
+      ensure that the budget names are limited to 15 alphabets
+      
       Generate a JSON response with the following structure:
       {
         "name": "Generated Group Name",
