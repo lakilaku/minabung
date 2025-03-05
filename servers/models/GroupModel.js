@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 import { database } from "../config/Mongodb.js";
 import UserModel from "./UserModel.js";
+import openai from "../helpers/openAI.js";
 
 export default class GroupModel {
   static collection() {
@@ -34,6 +35,9 @@ export default class GroupModel {
         },
       ],
       invite: invite,
+      incomes: [],
+      expenses: [],
+      budgets: [],
     };
     const result = await this.collection().insertOne(newGroup);
     if (!result.insertedId) {
@@ -66,7 +70,8 @@ export default class GroupModel {
         },
       }
     );
-    return group;
+    const updatedGroup = await this.findGroupById(group._id.toString());
+    return updatedGroup;
   }
   static async updateGroup(auth, id, name, description) {
     const group = await this.getGroupById(ObjectId.createFromHexString(id));
@@ -392,12 +397,18 @@ export default class GroupModel {
       .then((doc) => doc?.expenses[0]);
   }
 
-  static async deleteExpense(auth, expenseId) {
-    const group = await this.collection().findOne({
-      "expenses._id": ObjectId.createFromHexString(expenseId),
-    });
-
+  static async deleteExpense(auth, groupId, expenseId) {
+    const group = await this.getGroupById(
+      ObjectId.createFromHexString(groupId)
+    );
     if (!group) {
+      throw new Error("Group not found");
+    }
+
+    if (
+      !group.expenses ||
+      !group.expenses.some((exp) => exp._id.toString() === expenseId)
+    ) {
       throw new Error("Expense not found");
     }
 
@@ -416,11 +427,111 @@ export default class GroupModel {
       { _id: group._id },
       { $pull: { expenses: { _id: ObjectId.createFromHexString(expenseId) } } }
     );
-
     if (result.modifiedCount < 1) {
       throw new Error("Failed to delete expense");
     }
 
     return expenseToDelete;
+  }
+
+  static async createAIGroup(auth, userPrompt) {
+    const aiPrompt = `
+      You are an expert in financial planning.
+      A user wants to create a financial management group.
+      The user's request: "${userPrompt}".
+      If the user gives a specific budget amount, make sure that all of the limit is distributed to all of the budgets. 
+
+      For the icons use the following list as icon-name :
+      [
+          "restaurant", 
+          "shopping-cart", 
+          "attach-money", 
+          "wallet", 
+          "car-rental", 
+          "card-giftcard", 
+          "local-hospital", 
+          "home", 
+          "school", 
+          "flight", 
+          "subscriptions", 
+          "movie", 
+          "fitness-center", 
+          "pets", 
+          "child-care", 
+          "house-siding", 
+          "lightbulb",
+          "gas-meter", 
+          "water-drop",  
+          "trending-up", 
+          "savings", 
+          "luggage", 
+          "celebration",
+          "handyman", 
+          "diversity-3", 
+          "workspace-premium", 
+          "security", 
+          "groups", 
+          "volunteer-activism", 
+          "delivery-dining",
+          "liquor", 
+          "local-bar", 
+      ]
+      Generate a JSON response with the following structure:
+      {
+        "name": "Generated Group Name",
+        "description": "Short description of the group purpose",
+        "budgets": [
+          { "name": "Budget Category", "limit": 500000, "icon": "icon-name", "color": "blue" }
+        ]
+      }
+  
+      Keep the response strictly in valid JSON format without extra text.
+    `;
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [{ role: "system", content: aiPrompt }],
+        temperature: 0.7,
+      });
+
+      console.log("🔍 AI Response:", response);
+
+      let aiGeneratedData;
+      try {
+        aiGeneratedData = JSON.parse(response.choices[0].message.content);
+      } catch (jsonError) {
+        console.error("❌ JSON Parsing Error:", jsonError);
+        throw new Error("AI response is not in valid JSON format");
+      }
+      const budgetsWithIds = (aiGeneratedData.budgets || []).map((budget) => ({
+        _id: new ObjectId(),
+        ...budget,
+      }));
+
+      const newGroup = {
+        name: aiGeneratedData.name || "Default Group Name",
+        description: aiGeneratedData.description || "No description provided",
+        members: [
+          {
+            _id: ObjectId.createFromHexString(auth.id),
+            name: auth.name,
+            role: "Owner",
+          },
+        ],
+        incomes: [],
+        expenses: [],
+        budgets: budgetsWithIds,
+        invite: (Math.random() * 100000).toString(),
+      };
+
+      const result = await this.collection().insertOne(newGroup);
+      if (!result.insertedId) throw new Error("Failed to create AI group");
+
+      return { _id: result.insertedId, ...newGroup };
+    } catch (error) {
+      console.error("❌ AI Group Creation Failed:", error);
+      throw new Error("AI failed to generate group");
+    }
   }
 }

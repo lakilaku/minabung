@@ -81,7 +81,8 @@ type Mutation {
     deleteBudget(id: ID!): Budget
     addExpense(groupId: ID!, name: String!, note: String, amount: Float!, date: String, budgetId: ID): Expense
     updateExpense(id: ID!, name: String, note: String, amount: Float, date: String, budgetId: ID): Expense
-    deleteExpense(id: ID!): Expense
+    deleteExpense(groupId: ID!, expenseId: ID!): Expense
+    createAIGroup(userPrompt: String!): Group
 }
 `;
 
@@ -154,14 +155,16 @@ const resolvers = {
       const today = new Date();
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      const incomes = group.incomes.filter((income) => {
-        const date = new Date(income.date);
-        return date >= startOfMonth && date <= endOfMonth;
-      });
-      const expenses = group.expenses.filter((expense) => {
-        const date = new Date(expense.date);
-        return date >= startOfMonth && date <= endOfMonth;
-      });
+      const incomes =
+        group.incomes?.filter((income) => {
+          const date = new Date(income.date);
+          return date >= startOfMonth && date <= endOfMonth;
+        }) || [];
+      const expenses =
+        group.expenses?.filter((expense) => {
+          const date = new Date(expense.date);
+          return date >= startOfMonth && date <= endOfMonth;
+        }) || [];
 
       const incomeTransactions = incomes.map((income) => ({
         ...income,
@@ -358,13 +361,16 @@ const resolvers = {
         budgetId,
       });
     },
-    deleteExpense: async (_, { id }, { authentication }) => {
+    deleteExpense: async (_, { groupId, expenseId }, { authentication }) => {
       const user = await authentication();
       if (!user) {
         throw new Error("Unauthorized");
       }
-
-      return await GroupModel.deleteExpense(user, id);
+      return await GroupModel.deleteExpense(user, groupId, expenseId);
+    },
+    createAIGroup: async (_, { userPrompt }, { authentication }) => {
+      const user = await authentication();
+      return await GroupModel.createAIGroup(user, userPrompt);
     },
   },
 };

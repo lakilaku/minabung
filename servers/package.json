@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "SET NODE_OPTIONS=--experimental-vm-modules && jest --detectOpenHandles --forceExit --coverage"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +19,12 @@
     "graphql": "^16.10.0",
     "graphql-upload-minimal": "^1.6.1",
     "jsonwebtoken": "^9.0.2",
-    "mongodb": "^6.13.1"
+    "mongodb": "^6.13.1",
+    "openai": "^4.86.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^10.1.4",
+    "supertest": "^7.0.0"
   }
 }
