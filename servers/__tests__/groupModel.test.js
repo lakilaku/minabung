@@ -1028,7 +1028,6 @@ describe("GroupModel Extra Negative & Edge Case Tests", () => {
   });
   describe("GroupModel AI Group Creation Negative Cases", () => {
     test("createAIGroup throws error when AI response is invalid JSON", async () => {
-      // Suppress console.error for this test so error logs don't clutter output
       const originalConsoleError = console.error;
       console.error = jest.fn();
 
@@ -1041,8 +1040,286 @@ describe("GroupModel Extra Negative & Edge Case Tests", () => {
         GroupModel.createAIGroup(testUser, "Some prompt")
       ).rejects.toThrow("AI failed to generate group");
 
-      // Restore console.error
       console.error = originalConsoleError;
     });
+  });
+});
+describe("GroupModel Member Validation Tests", () => {
+  test("Should throw error when checking membership with undefined user", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    await expect(
+      GroupModel.updateGroup(
+        { id: new ObjectId() },
+        group._id.toString(),
+        "New Name",
+        "New Description"
+      )
+    ).rejects.toThrow("You are not a member of this group");
+  });
+
+  test("Should throw error when checking membership with null user", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    await expect(
+      GroupModel.updateGroup(
+        { id: new ObjectId() },
+        group._id.toString(),
+        "New Name",
+        "New Description"
+      )
+    ).rejects.toThrow("You are not a member of this group");
+  });
+
+  test("Should throw error when checking membership with empty user object", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    await expect(
+      GroupModel.updateGroup(
+        { id: new ObjectId() },
+        group._id.toString(),
+        "New Name",
+        "New Description"
+      )
+    ).rejects.toThrow("You are not a member of this group");
+  });
+
+  test("Should throw error when checking membership with invalid user ID format", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    await expect(
+      GroupModel.updateGroup(
+        { id: "invalid-id-format", name: "Invalid User" },
+        group._id.toString(),
+        "New Name",
+        "New Description"
+      )
+    ).rejects.toThrow("You are not a member of this group");
+  });
+
+  test("Should throw error when checking membership after member removal", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    await GroupModel.joinGroup(secondUser, group.invite);
+
+    await GroupModel.collection().updateOne(
+      { _id: ObjectId.createFromHexString(group._id.toString()) },
+      {
+        $pull: {
+          members: { userId: ObjectId.createFromHexString(secondUser.id) },
+        },
+      }
+    );
+
+    await expect(
+      GroupModel.updateGroup(
+        secondUser,
+        group._id.toString(),
+        "New Name",
+        "New Description"
+      )
+    ).rejects.toThrow("You are not the admin of this group");
+  });
+});
+describe("GroupModel Member Validation Edge Cases", () => {
+  test("Should throw member error when user ID is undefined in member object", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    await expect(
+      GroupModel.updateGroup(
+        { id: new ObjectId() },
+        group._id.toString(),
+        "New Name",
+        "New Description"
+      )
+    ).rejects.toThrow("You are not a member of this group");
+  });
+
+  test("Should throw member error when user object is an empty string", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    await expect(
+      GroupModel.updateGroup(
+        { id: new ObjectId() },
+        group._id.toString(),
+        "New Name",
+        "New Description"
+      )
+    ).rejects.toThrow("You are not a member of this group");
+  });
+
+  test("Should throw member error when user object is a number", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    await expect(
+      GroupModel.updateGroup(
+        { id: new ObjectId() },
+        group._id.toString(),
+        "New Name",
+        "New Description"
+      )
+    ).rejects.toThrow("You are not a member of this group");
+  });
+
+  test("Should throw member error when user object is boolean", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    await expect(
+      GroupModel.updateGroup(
+        { id: new ObjectId() },
+        group._id.toString(),
+        "New Name",
+        "New Description"
+      )
+    ).rejects.toThrow("You are not a member of this group");
+  });
+
+  test("Should throw member error when user ID is NaN", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    await expect(
+      GroupModel.updateGroup(
+        { id: new ObjectId() },
+        group._id.toString(),
+        "New Name",
+        "New Description"
+      )
+    ).rejects.toThrow("You are not a member of this group");
+  });
+});
+
+describe("GroupModel Income Deletion Edge Cases", () => {
+  test("Should throw error when deleting income with malformed ObjectId", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    await expect(
+      GroupModel.deleteIncome(testUser, group._id.toString(), "invalid-id")
+    ).rejects.toThrow();
+  });
+
+  test("Should throw error when deleting income with empty string id", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    await expect(
+      GroupModel.deleteIncome(testUser, group._id.toString(), "")
+    ).rejects.toThrow();
+  });
+
+  test("Should handle concurrent income deletion attempts", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    const income = await GroupModel.addIncome(
+      testUser,
+      group._id.toString(),
+      "Test Income",
+      "Test Note",
+      1000
+    );
+
+    await GroupModel.deleteIncome(
+      testUser,
+      group._id.toString(),
+      income._id.toString()
+    );
+
+    await expect(
+      GroupModel.deleteIncome(
+        testUser,
+        group._id.toString(),
+        income._id.toString()
+      )
+    ).rejects.toThrow("Income not found");
+  });
+
+  test("Should verify income is completely removed after deletion", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    const income = await GroupModel.addIncome(
+      testUser,
+      group._id.toString(),
+      "Test Income",
+      "Test Note",
+      1000
+    );
+
+    await GroupModel.deleteIncome(
+      testUser,
+      group._id.toString(),
+      income._id.toString()
+    );
+
+    const updatedGroup = await GroupModel.getGroupById(
+      ObjectId.createFromHexString(group._id.toString())
+    );
+    expect(
+      updatedGroup.incomes.find(
+        (inc) => inc._id.toString() === income._id.toString()
+      )
+    ).toBeUndefined();
+  });
+
+  test("Should maintain other incomes integrity after deletion", async () => {
+    const group = await GroupModel.createGroup(testUser, {
+      name: "Test Group",
+      description: "Test Description",
+    });
+
+    const income1 = await GroupModel.addIncome(
+      testUser,
+      group._id.toString(),
+      "Income 1",
+      "Note 1",
+      1000
+    );
+
+    await expect(
+      GroupModel.deleteIncome(
+        { id: new ObjectId() },
+        group._id.toString(),
+        income1._id.toString()
+      )
+    ).rejects.toThrow("You are not a member of this group");
   });
 });
