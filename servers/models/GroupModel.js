@@ -140,9 +140,6 @@ export default class GroupModel {
       { _id: ObjectId.createFromHexString(groupId) },
       { $push: { incomes: income } }
     );
-    if (result.modifiedCount < 1) {
-      throw new Error("Failed to add income");
-    }
     return income;
   }
 
@@ -176,9 +173,6 @@ export default class GroupModel {
         },
       }
     );
-    if (result.modifiedCount < 1) {
-      throw new Error("Failed to update income");
-    }
     const updatedGroup = await this.getGroupById(
       ObjectId.createFromHexString(groupId)
     );
@@ -210,9 +204,6 @@ export default class GroupModel {
       { _id: ObjectId.createFromHexString(groupId) },
       { $pull: { incomes: { _id: ObjectId.createFromHexString(id) } } }
     );
-    if (result.modifiedCount < 1) {
-      throw new Error("Failed to delete income");
-    }
     return "Delete Successful";
   }
   static async addBudget(auth, groupId, name, limit, icon, color) {
@@ -243,11 +234,6 @@ export default class GroupModel {
       { _id: ObjectId.createFromHexString(groupId) },
       { $push: { budgets: newBudget } }
     );
-
-    if (result.modifiedCount < 1) {
-      throw new Error("Failed to add budget");
-    }
-
     return newBudget;
   }
   static async updateBudget(auth, budgetId, updates) {
@@ -275,11 +261,6 @@ export default class GroupModel {
       { "budgets._id": ObjectId.createFromHexString(budgetId) },
       { $set: updatedFields }
     );
-
-    if (result.modifiedCount < 1) {
-      throw new Error("Failed to update budget");
-    }
-
     return await this.collection()
       .findOne(
         { "budgets._id": ObjectId.createFromHexString(budgetId) },
@@ -311,11 +292,6 @@ export default class GroupModel {
       { _id: group._id },
       { $pull: { budgets: { _id: ObjectId.createFromHexString(budgetId) } } }
     );
-
-    if (result.modifiedCount < 1) {
-      throw new Error("Failed to delete budget");
-    }
-
     return budgetToDelete;
   }
 
@@ -347,11 +323,6 @@ export default class GroupModel {
       { _id: ObjectId.createFromHexString(groupId) },
       { $push: { expenses: newExpense } }
     );
-
-    if (result.modifiedCount < 1) {
-      throw new Error("Failed to add expense");
-    }
-
     return newExpense;
   }
 
@@ -384,10 +355,6 @@ export default class GroupModel {
       { "expenses._id": ObjectId.createFromHexString(expenseId) },
       { $set: updatedFields }
     );
-
-    if (result.modifiedCount < 1) {
-      throw new Error("Failed to update expense");
-    }
 
     return await this.collection()
       .findOne(
@@ -427,9 +394,6 @@ export default class GroupModel {
       { _id: group._id },
       { $pull: { expenses: { _id: ObjectId.createFromHexString(expenseId) } } }
     );
-    if (result.modifiedCount < 1) {
-      throw new Error("Failed to delete expense");
-    }
 
     return expenseToDelete;
   }
