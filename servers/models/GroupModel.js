@@ -35,6 +35,9 @@ export default class GroupModel {
         },
       ],
       invite: invite,
+      incomes: [],
+      expenses: [],
+      budgets: [],
     };
     const result = await this.collection().insertOne(newGroup);
     if (!result.insertedId) {
@@ -67,7 +70,8 @@ export default class GroupModel {
         },
       }
     );
-    return group;
+    const updatedGroup = await this.findGroupById(group._id.toString());
+    return updatedGroup;
   }
   static async updateGroup(auth, id, name, description) {
     const group = await this.getGroupById(ObjectId.createFromHexString(id));
@@ -393,12 +397,18 @@ export default class GroupModel {
       .then((doc) => doc?.expenses[0]);
   }
 
-  static async deleteExpense(auth, expenseId) {
-    const group = await this.collection().findOne({
-      "expenses._id": ObjectId.createFromHexString(expenseId),
-    });
-
+  static async deleteExpense(auth, groupId, expenseId) {
+    const group = await this.getGroupById(
+      ObjectId.createFromHexString(groupId)
+    );
     if (!group) {
+      throw new Error("Group not found");
+    }
+
+    if (
+      !group.expenses ||
+      !group.expenses.some((exp) => exp._id.toString() === expenseId)
+    ) {
       throw new Error("Expense not found");
     }
 
@@ -417,22 +427,56 @@ export default class GroupModel {
       { _id: group._id },
       { $pull: { expenses: { _id: ObjectId.createFromHexString(expenseId) } } }
     );
-
     if (result.modifiedCount < 1) {
       throw new Error("Failed to delete expense");
     }
 
     return expenseToDelete;
   }
+
   static async createAIGroup(auth, userPrompt) {
     const aiPrompt = `
       You are an expert in financial planning.
       A user wants to create a financial management group.
       The user's request: "${userPrompt}".
       If the user gives a specific budget amount, make sure that all of the limit is distributed to all of the budgets. 
-      For the icons use the name of icons from materialicons (for example: shopping-cart).
+
+      For the icons use the following list as icon-name :
+      [
+          "restaurant", 
+          "shopping-cart", 
+          "attach-money", 
+          "wallet", 
+          "car-rental", 
+          "card-giftcard", 
+          "local-hospital", 
+          "home", 
+          "school", 
+          "flight", 
+          "subscriptions", 
+          "movie", 
+          "fitness-center", 
+          "pets", 
+          "child-care", 
+          "house-siding", 
+          "lightbulb",
+          "gas-meter", 
+          "water-drop",  
+          "trending-up", 
+          "savings", 
+          "luggage", 
+          "celebration",
+          "handyman", 
+          "diversity-3", 
+          "workspace-premium", 
+          "security", 
+          "groups", 
+          "volunteer-activism", 
+          "delivery-dining",
+          "liquor", 
+          "local-bar", 
+      ]
       Generate a JSON response with the following structure:
-  
       {
         "name": "Generated Group Name",
         "description": "Short description of the group purpose",
