@@ -439,13 +439,23 @@ export default class GroupModel {
           "delivery-dining",
           "liquor", 
           "local-bar", 
-      ]
+      ],
+      for the color-name of the budgets, limit the color selection to these colors:
+        [
+          "#3498db",
+          "#e74222",
+          "#2ecc71",
+          "#ff4d91",
+          "#9b59b6",
+          "#34495e",
+          "#f1c40f",
+        ]
       Generate a JSON response with the following structure:
       {
         "name": "Generated Group Name",
         "description": "Short description of the group purpose",
         "budgets": [
-          { "name": "Budget Category", "limit": 500000, "icon": "icon-name", "color": "blue" }
+          { "name": "Budget Category", "limit": 500000, "icon": "icon-name", "color": "color-name" }
         ]
       }
   
