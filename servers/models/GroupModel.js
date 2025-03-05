@@ -35,6 +35,9 @@ export default class GroupModel {
         },
       ],
       invite: invite,
+      incomes: [],
+      expenses: [],
+      budgets: [],
     };
     const result = await this.collection().insertOne(newGroup);
     if (!result.insertedId) {
@@ -67,7 +70,8 @@ export default class GroupModel {
         },
       }
     );
-    return group;
+    const updatedGroup = await this.findGroupById(group._id.toString());
+    return updatedGroup;
   }
   static async updateGroup(auth, id, name, description) {
     const group = await this.getGroupById(ObjectId.createFromHexString(id));
@@ -393,12 +397,18 @@ export default class GroupModel {
       .then((doc) => doc?.expenses[0]);
   }
 
-  static async deleteExpense(auth, expenseId) {
-    const group = await this.collection().findOne({
-      "expenses._id": ObjectId.createFromHexString(expenseId),
-    });
-
+  static async deleteExpense(auth, groupId, expenseId) {
+    const group = await this.getGroupById(
+      ObjectId.createFromHexString(groupId)
+    );
     if (!group) {
+      throw new Error("Group not found");
+    }
+
+    if (
+      !group.expenses ||
+      !group.expenses.some((exp) => exp._id.toString() === expenseId)
+    ) {
       throw new Error("Expense not found");
     }
 
@@ -417,13 +427,13 @@ export default class GroupModel {
       { _id: group._id },
       { $pull: { expenses: { _id: ObjectId.createFromHexString(expenseId) } } }
     );
-
     if (result.modifiedCount < 1) {
       throw new Error("Failed to delete expense");
     }
 
     return expenseToDelete;
   }
+
   static async createAIGroup(auth, userPrompt) {
     const aiPrompt = `
       You are an expert in financial planning.
