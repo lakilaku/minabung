@@ -155,10 +155,6 @@ class UserModel {
       { $set: { groupId: groupId } }
     );
 
-    if (result.modifiedCount < 1) {
-      throw new Error("Failed to update user with new groupId");
-    }
-
     console.log(`✅ User ${userId} now belongs to Group ${groupId}`);
   }
 }
